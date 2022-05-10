@@ -1,0 +1,235 @@
+---
+title: "Lab 6"
+author: "Karthikeyan Devarajan (Karde799)"
+date: "10/5/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(visNetwork)
+library(igraph)
+library(seriation)
+library(plotly)
+library(tidyverse)
+library(scales)
+library(tourr)
+```
+  
+# Assignment 1  
+*1) Use visNetwork package to plot the graph in which*  
+
+```{r}
+edges <- read.delim("trainData.dat", header = TRUE,sep="")
+node <- read.delim("trainMeta.dat", header = FALSE,sep="")
+colnames(node) <- c("label","group")
+colnames(edges) <- c("from","to","value")
+node$id <- seq(1,70,1)
+node <- node[,c(3,1,2)]
+net <- graph_from_data_frame(d = edges,vertices = node,directed = TRUE)
+node$value <- strength(net)
+Network <- visNetwork(node,edges)%>% 
+  visPhysics(solver='repulsion') %>% 
+  visOptions(highlightNearest = list(enabled = TRUE, degree = 1,
+                                     labelOnly = FALSE, hover = TRUE),
+             selectedBy = "group",
+             nodesIdSelection = TRUE) %>%
+  visEdges(color= list(inherit = "to")) %>%
+  visLegend(useGroups = T)
+Network
+```
+  
+  
+Jamal Zougam is the terrorist who is involved in the highest number of bombing. Most number of terrorist are involved in atleast 1 bombing. Sanel Sjekirika, Abdelhalak bentasse, Abu zubaidah, Mohamad Bard Dbin Akkabar, and Faisal Alluch are some terrorist not involved in any bombing.  
+
+There are two clusters formed(i.e)  
+i) The bomber connected to most number of bombings.   
+ii) The bomber connected to less number of bombing and more connections.  
+
+Strongest link:  
+Jamal zougam and mohamed chaoui has the strongest link.  
+
+Jamal Zougam, Mohamed Chaoui and Imad Eddin Barrakat act as the hub as it has the largest number and strongest connection.  
+
+*2) Add a functionality to the plot in step 1 that highlights all nodes that are connected to the selected node by a path of length one or two. Check some amount of the largest nodes and comment which individual has the best opportunity to spread the information in the network. Read some information about this person in Google and present your findings.*  
+
+```{r}
+Network <- visNetwork(node,edges)%>% 
+  visPhysics(solver='repulsion') %>% 
+  visOptions(highlightNearest = list(enabled = TRUE, degree = list(from=1,to = 2),
+                                     labelOnly = FALSE, hover = TRUE),
+             selectedBy = "group",
+             nodesIdSelection = TRUE) %>%
+  visLegend(useGroups = TRUE)
+Network
+```
+  
+Jamal Zougam and Mohammed Chaoui has the highest number of bombing, but Jamal Zougam has the largest number of connection. Jamal Zougam was involved in 2004 madrid train bombing and owned a mobile phone shop. Since, he owned a mobile phone shop which is optimum for connecting between different people.(https://en.wikipedia.org/wiki/Jamal_Zougam)  
+
+Jamal Zougam was born in morocco but moved to spain. The madrid train bomblast has killed 191 people and wonded 2050 people.(https://historica.fandom.com/wiki/Jamal_Zougam)  
+
+The order of each group is arranged with decrease in number of nodes in each cluster.  
+
+*3) Compute clusters by optimizing edge betweenness and visualize the resulting network. Comment whether the clusters you identified manually in step 1 were also discovered by this clustering method.*  
+```{r}
+net_cluster <- graph_from_data_frame(d=edges, vertices=node, directed=F)
+cluster_value <- cluster_edge_betweenness(net_cluster) 
+node$group=cluster_value$membership
+Network3 <- visNetwork(node,edges) %>%
+  visPhysics(solver='repulsion') %>% 
+  visOptions(highlightNearest = list(enabled = TRUE, degree = 1,labelOnly = FALSE, hover = TRUE),
+             selectedBy = "group",
+             nodesIdSelection = TRUE) %>%
+  visLegend(useGroups = TRUE)
+Network3
+```
+  
+The manually found cluster has some similarity in step 3. Clusters with largest number of bombing, Cluster with large connection and less bombing are clearly visible and same as previous step.   
+
+
+
+*4) Use adjacency matrix representation to perform a permutation by Hierarchical Clustering (HC) seriation method and visualize the graph as a heatmap. Find the most pronounced cluster and comment whether this cluster was discovered in steps 1 or 3.*  
+```{r}
+netm <- get.adjacency(net_cluster, attr="value", sparse=F)
+colnames(netm) <- V(net_cluster)$label
+rownames(netm) <- V(net_cluster)$label
+
+rowdist<-dist(netm)
+
+
+order1<-seriate(rowdist, "HC")
+ord1<-get_order(order1)
+
+reordmatr<-netm[ord1,ord1]
+
+
+
+plot_ly(z=~reordmatr, x=~colnames(reordmatr), 
+        y=~rownames(reordmatr), type="heatmap")
+```
+  
+The cluster for highest number of bombing is present in the top right corner and the cluster with the no bombing is present in bottom left corner. These overlap with the clusters with the clusters in step 1 and step 3.    
+  
+# Assignment 2  
+*1) Visualize data in Plotly as an animated bubble chart of Coal versus Oil in which the bubble size corresponds to the country size. List several noteworthy features of the investigated animation.*  
+```{r}
+oil_coal <- as.data.frame(read.csv2("Oilcoal.csv"))
+plot_ly(oil_coal, x=~Coal, y=~Oil, frame =~Year, size =~Marker.size, color =~Country) %>% 
+  animation_opts(1000, easing = "elastic", redraw = F)
+```
+  
+US and china is the largest consumption of oil and coal. The consumption of coal and oil has increased across all countries along the years from 1965 to 2008.  
+
+*2) Find two countries that had similar motion patterns and create a motion chart including these countries only. Try to find historical facts that could explain some of the sudden changes in the animation behavior.*  
+Japan and US have similar pattern of motion.  
+```{r}
+new_coal <- oil_coal[oil_coal$Country == c("Japan","US"),]
+plot_ly(new_coal, x=~Coal, y=~Oil, frame =~Year, size =~Marker.size, color =~Country) %>% 
+  animation_opts(1000, easing = "elastic", redraw = F)
+```
+  
+Japan and US has similar motion pattern but with different magnitude. The difference in magnitude is because of the population difference.  
+
+*3) Compute a new column that shows the proportion of fuel consumption related to oil: $Oil_p = \frac{Oil}{Oil + Coal} x 100$ . One could think of visualizing the proportions $Oil_p$ by means of animated bar charts; however smooth transitions between bars are not yet implemented in Plotly. Thus, use the following workaround:*  
+```{r}
+oil_coal_final <- oil_coal
+oil_coal_final <- as.data.frame(lapply(oil_coal_final, rep, 2))
+oil_coal_final$oil_p <- (oil_coal_final$Oil/(oil_coal_final$Oil + oil_coal_final$Coal))*100
+oil_coal_final <- oil_coal_final[,-c(6)]
+oil_coal_final[361:720,]$oil_p <- 0
+```
+  
+```{r}
+oil_coal_final <- oil_coal_final[order(oil_coal_final$Year,oil_coal_final$Country),]
+####
+p3 <- oil_coal_final %>%
+  plot_ly(x = ~Country, y = ~oil_p, size = ~Marker.size, color = ~Country,
+    frame = ~Year, line = list(width = 30), text = ~Country, type = 'scatter',mode = "lines",showlegend = T
+  )
+p3
+```
+  
+The given formula represents the oil consumption among the total energy consumption from oil and coal.The animated bubble chart the total energy consumption from coal and oil is shown for each country. In bar chart, we have filtered the percentage of oil consumption for energy and we have plotted for each country.The increase and decrease of oil of each country over the year can be easily viewed.  
+The disadvantage of bar chart, the change of consumption for each year is difficult to follow.  
+
+*4) Repeat the previous step but use “elastic” transition (easing). Which advantages and disadvantages can you see with this animation? Use information in https://easings.net/ to support your arguments.*  
+```{r}
+p3 <- p3%>%animation_opts(
+  easing = "elastic", redraw = T)
+p3
+
+```
+The easing will help to view the graph stepwise but sudden change in between years is difficult to view.  
+  
+*5) Use Plotly to create a guided 2D-tour visualizing Coal consumption in which the index function is given by Central Mass index and in which observations are years and variables are different countries. Find a projection with the most compact and well-separated clusters. Do clusters correspond to different Year ranges? Which variable has the largest contribution to this projection? How can this be interpreted? (Hint: make a time series plot for the Coal consumption of this country)*  
+```{r}
+mat <- oil_coal[c("Country","Year","Coal")]
+mat <- mat %>% spread(.,Country,Coal) 
+rownames(mat) <- mat[,1]
+mat <- mat[,-c(1)]
+mat <- rescale(mat)
+
+set.seed(12345)
+tour<- new_tour(mat, guided_tour(cmass), NULL)
+
+steps <- c(0, rep(1/15, 200))
+
+Projs<-lapply(steps, function(step_size){  
+  step <- tour(step_size)
+  if(is.null(step)) {
+    .GlobalEnv$tour<- new_tour(mat, guided_tour(cmass), NULL)
+    step <- tour(step_size)
+  }
+  step
+}
+)
+
+# projection of each observation
+tour_dat <- function(i) {
+  step <- Projs[[i]]
+  proj <- center(mat %*% step$proj)
+  data.frame(x = proj[,1], y = proj[,2], state = rownames(mat))
+}
+
+# projection of each variable's axis
+proj_dat <- function(i) {
+  step <- Projs[[i]]
+  data.frame(
+    x = step$proj[,1], y = step$proj[,2], variable = colnames(mat)
+  )
+}
+
+stepz <- cumsum(steps)
+
+# tidy version of tour data
+
+tour_dats <- lapply(1:length(steps), tour_dat)
+tour_datz <- Map(function(x, y) cbind(x, step = y), tour_dats, stepz)
+tour_dat <- dplyr::bind_rows(tour_datz)
+
+# tidy version of tour projection data
+proj_dats <- lapply(1:length(steps), proj_dat)
+proj_datz <- Map(function(x, y) cbind(x, step = y), proj_dats, stepz)
+proj_dat <- dplyr::bind_rows(proj_datz)
+
+ax <- list(
+  title = "", showticklabels = FALSE,
+  zeroline = FALSE, showgrid = FALSE,
+  range = c(-1.1, 1.1)
+)
+
+# for nicely formatted slider labels
+options(digits = 3)
+tour_dat <- highlight_key(tour_dat, ~state, group = "A")
+tour <- proj_dat %>%
+  plot_ly(x = ~x, y = ~y, frame = ~step, color = I("black")) %>%
+  add_segments(xend = 0, yend = 0, color = I("gray80")) %>%
+  add_text(text = ~variable) %>%
+  add_markers(data = tour_dat, text = ~state, ids = ~state, hoverinfo = "text") %>%
+  layout(xaxis = ax, yaxis = ax)#%>%animation_opts(frame=0, transition=0, redraw = F)
+tour
+```
+
+  
+Brazil, Japan and US seems to have high influence in the projection. Time series plot can be for these countries.
+
