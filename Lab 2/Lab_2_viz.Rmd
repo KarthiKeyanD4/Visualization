@@ -1,0 +1,214 @@
+---
+title: "Lab 2 - Visualization"
+author: "Karthikeyan Devarajan(Karde799)"
+date: "9/7/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(plotly)
+library(readxl)
+library(MASS)
+library(dplyr)
+library(tidyverse)
+library(gridExtra)
+library(ggplotlyExtra)
+library(plotly)
+library(shiny)
+```
+# Assignment 1. Perception in Visualization  
+*1) Create a scatterplot in Ggplot2 that shows dependence of Palmitic on Oleic in which observations are colored by Linoleic. Create also a similar scatter plot in which you divide Linoleic variable into fours classes (use cut_interval() ) and map the discretized variable to color instead. How easy/difficult is it to analyze each of these plots? What kind of perception problem is demonstrated by this experiment?*  
+```{r,echo=FALSE}
+olive <- read.csv("olive.csv")
+```
+
+
+```{r,echo=FALSE}
+plot_1 <- ggplot(olive,aes(x = palmitic,y = oleic,color=linoleic)) + geom_point() + theme_light()
+plot_1
+```
+
+
+```{r,echo=FALSE,warning=FALSE}
+plot_1 <- ggplot(olive,aes(x = palmitic,y = oleic,col=cut_interval(x=linoleic, n = 4))) + geom_point() + theme_light() + labs(colour = "Linoleic Variable with n = 4")
+plot_1
+```
+  
+The plot with n = 4 was better for visualization because it has segmented values into better groups.  
+
+*2) Create scatterplots of Palmitic vs Oleic in which you map the discretized Linoleic with four classes to:*  
+```{r,echo=FALSE}
+# based on color
+plot_1 <- ggplot(olive,aes(x = oleic,y = palmitic,col=cut_interval(x=linoleic, n = 4))) + geom_point() + theme_light() + labs(colour = "Linoleic Variable with n = 4")
+plot_1
+
+#based on size
+plot_1 <- ggplot(olive,aes(x = oleic,y = palmitic,size=cut_interval(x=linoleic, n = 4))) + geom_point() + theme_light() + labs(colour = "Linoleic Variable with n = 4")
+plot_1
+#based on orientation
+plot_1 <- ggplot(olive,aes(x = oleic,y = palmitic)) + geom_point() + geom_spoke(aes(angle = as.numeric(cut_interval(x=linoleic, n = 4))), radius = 50) + theme_light() + labs(colour = "Linoleic Variable with n = 4")
+plot_1
+```
+  
+In the above graphs, the graph which is differentiated by color is better and differentiated by size is difficult.  
+
+*3) Create a scatterplot of Oleic vs Eicosenoic in which color is defined by numeric values of Region. What is wrong with such a plot? Now create a similar kind of plot in which Region is a categorical variable. How quickly can you identify decision boundaries? Does preattentive or attentive mechanism make it possible?*  
+
+```{r,echo=FALSE}
+# region as a numeric value
+plot_1 <- ggplot(olive,aes(x = eicosenoic,y = oleic,col=Region)) + geom_point() + theme_light() + labs(colour = "Region")
+plot_1
+
+# region as a categorical value
+plot_1 <- ggplot(olive,aes(x = eicosenoic,y = oleic,col=as.factor(Region))) + geom_point() + theme_light() + labs(colour = "Region")
+plot_1
+```
+  
+When region is considered as numeric value, pre attentive mechanism is needed. Whereas, when region is considered as factor it is easily able to differentiate.  
+*4) Create a scatterplot of Oleic vs Eicosenoic in which color is defined by a discretized Linoleic (3 classes), shape is defined by a discretized Palmitic (3 classes) and size is defined by a discretized Palmitoleic (3 classes). How difficult is it to differentiate between 27=3x3x3 different types of observations? What kind of perception problem is demonstrated by this graph?*  
+```{r,echo=FALSE,warning=FALSE}
+class_color <- cut_interval(x=olive$linoleic, n = 3)
+class_size <- cut_interval(x=olive$palmitic, n = 3)
+class_shape <- cut_interval(x=olive$palmitoleic, n = 3)
+
+plot_1 <- ggplot(olive, aes(x=eicosenoic, y=oleic,col=class_color)) +
+  geom_point(shape = class_shape,size=class_size)  + labs(colour = "class") +
+  theme_light() 
+plot_1
+```
+  
+*5) Create a scatterplot of Oleic vs Eicosenoic in which color is defined by Region, shape is defined by a discretized Palmitic (3 classes) and size is defined by a discretized Palmitoleic (3 classes). Why is it possible to clearly see a decision boundary between Regions despite many aesthetics are used? Explain this phenomenon from the perspective of Treisman's theory.*  
+
+```{r,echo=FALSE,warning=FALSE}
+class_shape <- cut_interval(x=olive$palmitic, n = 3)
+class_size <- cut_interval(x=olive$palmitoleic, n = 3)
+
+plot_1 <- ggplot(olive, aes(x=eicosenoic, y=oleic,col=Region)) +
+  geom_point(shape = class_shape,size=class_size)  + labs(colour = "class") +
+  theme_light() 
+plot_1
+```
+  
+*6) Use Plotly to create a pie chart that shows the proportions of oils coming from different Areas. Hide labels in this plot and keep only hover-on labels. Which problem is demonstrated by this graph?*  
+```{r,echo=FALSE}
+Pie_chart <- plot_ly(olive, labels = ~Area, values = ~oleic, type = 'pie',textinfo = "none") %>%
+                          layout(showlegend = FALSE)
+Pie_chart
+```
+  
+*7) Create a 2d-density contour plot with Ggplot2 in which you show dependence of Linoleic vs Eicosenoic. Compare the graph to the scatterplot using the same variables and comment why this contour plot can be misleading.*  
+```{r,echo=FALSE}
+# 2d density contour plot
+ggplot(olive, aes(x=eicosenoic, y=linoleic) ) +
+  geom_density_2d() +
+  theme_light()
+
+# Density plot
+ggplot(olive, aes(x=eicosenoic, y=linoleic) ) +
+  geom_point() +
+  theme_light()
+```
+  
+
+
+# Assignment 2. Multidimensional scaling of a highdimensional dataset  
+*1) Load the file to R and answer whether it is reasonable to scale these data in order to perform a multidimensional scaling (MDS).*  
+```{r,echo=FALSE,warning=FALSE}
+baseball = read_xlsx("baseball-2016.xlsx")
+baseball.numeric= as.data.frame(scale(baseball[,3:28]))
+d=dist(baseball.numeric)
+coords=cmdscale(d,2)
+coordsMDS=as.data.frame(coords)
+coordsMDS$name=rownames(coordsMDS)
+
+plot_ly(coordsMDS, x=~V1, y=~V2, type="scatter", hovertext=~name)
+```
+  
+```{r,warning=FALSE,echo=FALSE}
+d=dist(baseball)
+coords=cmdscale(d,2)
+coordsMDS=as.data.frame(coords)
+coordsMDS$name=rownames(coordsMDS)
+
+plot_ly(coordsMDS, x=~V1, y=~V2, type="scatter", hovertext=~name)
+```
+  
+The cluster in plot after scaling is better in visualizing then plot without scaling. The main reason is the values of each column is different scales.The appearance of cluster is better in graph with scale than without scale. So, it is reasonable to scale the data.  
+
+*2) Write an R code that performs a non-metric MDS with Minkowski distance=2 of the data (numerical columns) into two dimensions. Visualize the resulting observations in Plotly as a scatter plot in which observations are colored by League. Does it seem to exist a difference between the leagues according to the plot? Which of the MDS components seem to provide the best differentiation between the Leagues? Which baseball teams seem to be outliers?*  
+
+```{r,echo=FALSE,warning=FALSE}
+d=dist(baseball.numeric,method = "minkowski",p=2)
+res=isoMDS(d,k=2)
+coords=res$points
+
+coordsNMDS=as.data.frame(coords)
+coordsNMDS$name=rownames(coordsNMDS)
+coordsNMDS$League = baseball$League
+
+plot_1 <- plot_ly(coordsNMDS, x=~V1, y=~V2, color= ~League,colors = "Set1")
+plot_1
+```
+  
+The league AL seems to be clustered in the middle and league NL is more widespread.The V2 component seems to differentiate between two league because the upper side is concentrated by league AL and lower side is concentrated by NL.  
+
+*3) Use Plotly to create a Shepard plot for the MDS performed and comment about how successful the MDS was. Which observation pairs were hard for the MDS to map successfully?*  
+```{r,echo=FALSE}
+sh <- Shepard(d, coords)
+delta <-as.numeric(d)
+D<- as.numeric(dist(coords))
+
+n=nrow(coords)
+index=matrix(1:n, nrow=n, ncol=n)
+index1=as.numeric(index[lower.tri(index)])
+
+n=nrow(coords)
+index=matrix(1:n, nrow=n, ncol=n, byrow = T)
+index2=as.numeric(index[lower.tri(index)])
+
+
+
+plot_ly()%>%
+  add_markers(x=~delta, y=~D, hoverinfo = 'text',
+        text = ~paste('Obj1: ', rownames(baseball)[index1],
+                      '<br> Obj 2: ', rownames(baseball)[index2]))%>%
+        add_lines(x=~sh$x, y=~sh$yf)
+  
+```
+  
+The convergence is monotone with some outlier. NY mets vs Mennesta twins,Washington Nationals vs Aizona Diamondbacks were hard to map successfully. Mostly, the pairing which involves Mennesta twins are very hard to pair.  
+
+*4) Produce series of scatterplots in which you plot the MDS variable that was the best in the differentiation between the leagues in step 2 against all other numerical variables of the data. Pick up two scatterplots that  seem to show the strongest (positive or negative)  connection between the variables and include them into your report. Find some information about these variables in Google - do they appear to be important in scoring the baseball teams? Provide some interpretation for the chosen MDS variable.*  
+```{r,echo = FALSE}
+d=dist(baseball.numeric,method = "minkowski",p=2)
+res=isoMDS(d,k=2)
+coords=res$points
+
+coordsNMDS=as.data.frame(coords)
+col_names <- names(baseball.numeric)
+```
+
+```{r,echo=FALSE}
+# plot_list <- list()
+# for(i in 1:ncol(baseball.numeric)){
+#   print(ggplot(data = baseball.numeric,aes(x=coordsNMDS$V2,y=baseball.numeric[,i])) + geom_point() + ylab(colnames(baseball.numeric)[i]))
+# }
+
+ggplot(data = baseball.numeric,aes(x=coordsNMDS$V2,y=baseball.numeric[,10])) + geom_point() + ylab(colnames(baseball.numeric)[10]) + xlab("MDSComponent")
+
+
+ggplot(data = baseball.numeric,aes(x=coordsNMDS$V2,y=baseball.numeric[,19])) + geom_point() + ylab(colnames(baseball.numeric)[19]) + xlab("MDSComponent")
+```
+  
+  
+As we interpreted in question 1, component V2 is able to differentiate between each class of variables. So, we have used V2 component here. Two parameter which show strong parameter are On-base Plus Slugging and  Home Run. 
+The Home Run is an scoring method which allows the batting team to get big score and On-base Plus slugging is a power hitting capacity of the player.  
+
+# Appendix
+```{r ref.label=knitr::all_labels(), echo = T, eval = F,warning=F}
+```
+
