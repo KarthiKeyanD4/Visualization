@@ -1,0 +1,222 @@
+---
+title: "Lab 5"
+author: "Karthikeyan Devarajan (Karde799)"
+date: "9/29/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+library(plotly)
+library(crosstalk)
+library(tidyr)
+library(ggplot2)
+library(GGally)
+```
+  
+# Assignments 1  
+*1) Use R tools to create a word cloud corresponding to Five.txt and OneTwo.txt and adjust the colors in the way you like. Analyze the graphs.*   
+The below graph will show the word cloud containing happy customers review words.  
+
+```{r,echo=FALSE}
+Five_data <- read.table("FIVE.txt",header=F, sep='\n') #Read file
+Five_data$doc_id=1:nrow(Five_data)
+colnames(Five_data)[1]<-"text"
+
+#Here we interpret each line in the document as separate document
+mycorpus <- Corpus(DataframeSource(Five_data)) #Creating corpus (collection of text data)
+mycorpus <- tm_map(mycorpus, removePunctuation)
+mycorpus <- tm_map(mycorpus, function(x) removeWords(x, stopwords("english")))
+tdm <- TermDocumentMatrix(mycorpus) #Creating term-document matrix
+m <- as.matrix(tdm)
+
+#here we merge all rows
+v <- sort(rowSums(m),decreasing=TRUE) #Sum up the frequencies of each word
+d <- data.frame(word = names(v),freq=v) #Create one column=names, second=frequences
+pal <- brewer.pal(6,"Dark2")
+pal <- pal[-(1:2)] #Create palette of colors
+wordcloud(d$word,d$freq, scale=c(8,.3),min.freq=2,max.words=100, random.order=F, rot.per=.15, colors=pal, vfont=c("sans serif","plain")) 
+```
+  
+The size of the word defines the frequency of the words occurring. Most occuring review is good analog, Digital, mentioning Casio, Nice, Mentions Time, the word great, band.  
+  
+```{r,echo=FALSE}
+One_two_data <- read.table("OneTwo.txt",header=F, sep='\n') #Read file
+One_two_data$doc_id=1:nrow(One_two_data)
+colnames(One_two_data)[1]<-"text"
+
+#Here we interpret each line in the document as separate document
+mycorpus <- Corpus(DataframeSource(One_two_data)) #Creating corpus (collection of text data)
+mycorpus <- tm_map(mycorpus, removePunctuation)
+mycorpus <- tm_map(mycorpus, function(x) removeWords(x, stopwords("english")))
+tdm <- TermDocumentMatrix(mycorpus) #Creating term-document matrix
+m <- as.matrix(tdm)
+
+#here we merge all rows
+v <- sort(rowSums(m),decreasing=TRUE) #Sum up the frequencies of each word
+d <- data.frame(word = names(v),freq=v) #Create one column=names, second=frequences
+pal <- brewer.pal(6,"Dark2")
+pal <- pal[-(1:2)] #Create palette of colors
+wordcloud(d$word,d$freq, scale=c(8,.3),min.freq=2,max.words=100, random.order=F, rot.per=.15, colors=pal, vfont=c("sans serif","plain"))
+```
+  
+The second word cloud denotes the negative review about the watch. The most common words used are Battery, Replace, Digital, Analog, Working.   
+
+*2) Create the phrase nets for Five.Txt and One.Txt with connector words*  
+*i ) am, is, are, was, were*  
+a) Five star   
+![Happy customers.Connector words-am,is,are,was,were](Five_am.png)  
+b) One Two Star  
+![UnHappy customers.Connector words-am,is,are,was,were](OneTwo_am.png)  
+
+*ii) a, the*  
+a) Five star   
+![Happy customers.Connector words-a, the](Five_a.png)  
+b) One Two Star  
+![UnHappy customers.Connector words-a, the](OneTwo_a.png)  
+*iii) at*  
+a) Five star   
+![Happy customers.Connector words-at](Five_at.png)  
+b) One Two Star  
+![UnHappy customers.Connector words-at](OneTwo_at.png)  
+*iv) of*  
+a) Five star   
+![Happy customers.Connector words-of](Five_of.png)  
+b) One Two Star  
+![UnHappy customers.Connector words-of](OneTwo_of.png)  
+
+*3) When you find an interesting connection between some words, use Word Trees https://www.jasondavies.com/wordtree/ to understand the context better. Note that this link might not work properly in Microsoft Edge (if you are using Windows 10) so use other browsers.*  
+*a) Which properties of this watch are mentioned mostly often?*  
+i) The quality of the watch for its low cost.  
+ii) Its Water Resistance ability.  
+iii) The style of dial.  
+iv) Appearance of the watch.  
+
+*b) What are satisfied customers talking about?*    
+i) Designs for multiple events.  
+ii) Very low Cost  
+iii)Durability  
+iv) Water Resistance at high pressure.  
+v) Multiple straps for the dial  
+vi) Long life  
+vii) Additional feature such as solar powered, Luminous.  
+
+*c) What are unsatisfied customers talking about? *  
+i) Time keeps changing each month  
+ii) Poor Battery  
+iii) Poor service for repairing and replacement  
+iv) Sometimes doesn't work well in water.  
+v) Bad Alarm features.  
+vi) Bad Luminous especially during daylight  
+
+*d) What are good and bad properties of the watch mentioned by both groups?*  
+Good Properties:  
+i) It has a very cheap price.  
+ii) We could get at various color strap and design for various dress style.  
+iii) High durable  
+iv) Long life  
+v) Good design for dial  
+
+Bad Properties:  
+i) There is change in time accuracy between several weeks.  
+ii) Very Bad service for Replacement  
+iii) Bad Alarm Features.  
+iv) Poor Battery and Poor Luminous.   
+
+*e) Can you understand watch characteristics (like type of display, features of the watches) by observing these graphs?*    
+i) Water Resistant  
+ii) Both display - Analog and Digital  
+iii) Multiple Band and Multiple display types  
+
+  
+# Assignment 2  
+*1) Create an interactive scatter plot of the eicosenoic against linoleic. You have probably found a group of observations having unusually low values of eicosenoic. Hover on these observations to find out the exact values of eicosenoic for these observations.* 
+```{r,echo=FALSE}
+olive <- read.csv("olive.csv")
+d <- SharedData$new(olive)
+
+scatter1 <- plot_ly(d, x = ~linoleic, y = ~eicosenoic) %>%
+  add_markers(color = I("black"))
+scatter1
+```
+  
+The lowest values for eicosenoic near zero.  
+
+*2) Link the scatterplot of (eicosenoic, linoleic) to a bar chart showing Region and a slider that allows to filter the data by the values of stearic. Use persistent brushing to identify the regions that correspond unusually low values of eicosenoic. Use the slider and describe what additional relationships in the data can be found by using it. Report which interaction operators were used in this step*   
+```{r,echo=FALSE}
+bar1 <-plot_ly(d, x=~as.factor(Region))%>%add_histogram()%>%layout(barmode="overlay")
+bar1
+bscols(widths=c(2, NA),filter_slider("Stearic", "Stearic Values", d, ~stearic)
+        ,subplot(scatter1,bar1)%>%
+  highlight(on="plotly_select", dynamic=T, persistent = T, opacityDim = I(1))%>%hide_legend())
+```
+  
+*3) Create linked scatter plots eicosenoic against linoleic and arachidic against linolenic. Which outliers in (arachidic, linolenic) are also outliers in (eicosenoic, linoleic)? Are outliers grouped in some way? Use brushing to demonstrate your findings*  
+```{r,echo=FALSE}
+scatter2 <- plot_ly(d, x = ~linolenic, y = ~arachidic) %>%
+  add_markers(color = I("black"))
+subplot(scatter1,scatter2)%>%
+  highlight(on="plotly_select", dynamic=T, persistent=T, opacityDim = I(1))%>%hide_legend()
+```
+
+  
+*4) Create a parallel coordinate plot for the available eight acids, a linked 3d-scatter plot in which variables are selected by three additional drop boxes and a linked bar chart showing Regions. Use persistent brushing to mark each region by a different color. Observe the parallel coordinate plot and state which three variables (let’s call them influential variables) seem to be mostly reasonable to pick up if one wants to differentiate between the regions. Does the parallel coordinate plot demonstrate that there are clusters among the observations that belong to the same Region? Select the three influential variables in the drop boxes and observe in the 3d-plot whether each Region corresponds to one cluster. *    
+```{r,echo=FALSE,message=FALSE,warning=FALSE,persistant=FALSE}
+# Parallel Co - ordinate plot 
+p<-ggparcoord(olive, columns = c(4:11))
+d<-plotly_data(ggplotly(p))%>%group_by(.ID)
+d1<-SharedData$new(d, ~.ID, group="olive")
+p1 <- plot_ly(d1, x=~variable, y=~value)%>%add_lines(line=list(width=0.3))%>%
+  add_markers(marker=list(size=0.3),text=~.ID, hoverinfo="text")
+
+# Bar chart for region 
+olive2=olive
+olive2$.ID=1:nrow(olive)
+d2<-SharedData$new(olive2, ~.ID, group="olive")
+p2<-plot_ly(d2, x=~factor(Region) )%>%add_histogram()%>%layout(barmode="overlay")
+
+# 3d scatterplot 
+ButtonsX=list()
+for (i in 4:11){
+  ButtonsX[[i-3]]= list(method = "restyle",
+                        args = list( "x", list(olive[[i]])),
+                        label = colnames(olive)[i])
+}
+ButtonsY=list()
+for (i in 4:11){
+  ButtonsY[[i-3]]= list(method = "restyle",
+                        args = list( "y", list(olive[[i]])),
+                        label = colnames(olive)[i])
+}
+ButtonsZ=list()
+for (i in 4:11){
+  ButtonsZ[[i-3]]= list(method = "restyle",
+                        args = list( "z", list(olive[[i]])),
+                        label = colnames(olive)[i])
+}
+
+p3 <- plot_ly(d2, x=~palmitic, y=~stearic, z=~oleic, alpha = 0.8) %>%
+  add_markers() %>%
+  layout(xaxis=list(title=""), yaxis=list(title=""), zaxis=list(title=""),
+         title = "Select variable:",
+         updatemenus = list(
+           list(y=1.00, buttons = ButtonsX),
+           list(y=0.85, buttons = ButtonsY),
+           list(y=0.70, buttons = ButtonsZ)
+         )  )
+
+bscols(p1%>%highlight(on="plotly_select", dynamic=T, persistent = T, opacityDim = I(1))%>%
+         hide_legend(),
+       p3%>%highlight(on="plotly_click", dynamic=T, persistent = T)%>%hide_legend(),
+       p2%>%highlight(on="plotly_click", dynamic=T, persistent = T)%>%hide_legend())
+
+```
+  
+In 3d scatter plot, we can filter the parameter we want and view the combination of level. We could truncate for the region which we want and the other graph will be truncated too. 
+  
+
