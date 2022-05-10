@@ -1,0 +1,222 @@
+---
+title: "Lab 3 - Visualization"
+author: "Karthikeyan Devarajan(Karde799)"
+date: "9/14/2021"
+output:
+  html_document:
+    latex_engine: xelatex
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(plotly)
+library(ggplot2)
+library(dplyr)
+library(mapproj)
+library(maps)
+library(MASS)
+library(akima)
+library(lattice)
+library(tidyr)
+library(sf)
+```
+  
+
+# Assignment 1  
+*1) Use MapBox interface in Plotly to create two dot maps (for years 2004 and 2013) that show the distribution of the two types of mosquitos in the world (use color to distinguish between mosquitos). Analyze which countries and which regions in these countries had high density of each mosquito type and how the situation changed between these time points. What perception problems can be found in these plots?*  
+
+
+```{r,echo=FALSE}
+mosquito <- read.csv('aegypti_albopictus.csv')
+Sys.setenv('MAPBOX_TOKEN' = 'pk.eyJ1Ijoia2FydGhoaWtleWFuMDQwMSIsImEiOiJja3RzdzRtcjcxN3pqMnVucWZyeGhkaWJ3In0.Bg1lOzV0HFUgqetfGd3p8g')
+
+# year 2004
+year_2004 <- mosquito[which(mosquito$YEAR==2004),]
+plot_2004 <- year_2004 %>% plot_mapbox(lon=~X,lat=~Y,split=~VECTOR,mode = 'scattermapbox')
+plot_2004
+```
+  
+
+In year 2004, Aedes aegypti is found more in Brazil, Mexico and Africa. Aedes albopictus is found more in USA, Japan and Europe.     
+  
+```{r,echo=FALSE}
+# year 2013
+year_2013 <- mosquito[which(mosquito$YEAR==2013),]
+plot_2013 <- year_2013 %>% plot_mapbox(lon=~X,lat=~Y,split=~VECTOR,mode = 'scattermapbox')
+plot_2013
+```
+  
+In 2013, Aedes aegypti is found majorly in brazil and south eastern countries. This specie of mosquito has decreased in other countries but showed a drastic increase in brazil. In brazil, Aedes albopictus in fully elminated but still exist in some central European countries and china.  
+
+*2) Compute Z as the numbers of mosquitos per country detected during all study period. Use plot_geo() function to create a choropleth map that shows Z values. This map should have an Equirectangular projection. Why do you think there is so little information in the map?*  
+```{r,echo=FALSE}
+Z <- mosquito %>% count(mosquito$COUNTRY)
+colnames(Z) <- c("Country","count")
+# WORLD MAP
+g <- list(
+  projection = list(type = 'Equirectangular')
+)
+
+p <- plot_geo(Z) %>%
+  add_trace(
+    z = ~count, color = ~count, type = "choropleth",colors = 'Blues',
+    locations = ~Country, locationmode = 'country names'
+  ) %>%
+    layout(
+    geo = g
+  )
+
+p
+```
+  
+The color difference is very large because of the difference in the total count of the mosquito present in the countries. Taiwan and Brazil has a mosquito population of 24,837 and 8501 number of mosquito. So, they appear closer towards dark blue but countries like India, China and Japan has number close towards zero, so they appear close to white.  
+
+*3) Create the same kind of maps as in step 2 but use*  
+*a. Equirectangular projection with choropleth color log*  
+```{r,echo=FALSE}
+# WORLD MAP
+g <- list(
+  projection = list(type = 'Equirectangular')
+)
+
+p <- plot_geo(Z) %>%
+  add_trace(
+    z = ~log(count), color = ~log(count), type = "choropleth",colors = 'Reds',
+    locations = ~Country, locationmode = 'country names'
+  ) %>%
+    layout(
+    geo = g
+  )
+
+p
+
+```
+  
+*b. Conic equal area projection with choropleth color log*  
+  
+```{r,echo=FALSE}
+# WORLD MAP
+g <- list(
+  projection = list(type = 'conic equal area')
+)
+
+p <- plot_geo(Z) %>%
+  add_trace(
+    z = ~log(count), color = ~log(count), type = "choropleth",colors = 'Reds',
+    locations = ~Country, locationmode = 'country names'
+  ) %>%
+    layout(
+    geo = g
+  )
+
+p
+```
+The log of a vector which has different scale values will make them more equivalent and reduce our difficulty to analyze.  
+
+ *Analyze the map from step 3a and make conclusions. Compare maps from 3a and 3b and comment which advantages and disadvantages you may see with both types of maps*  
+ 
+Advantages:  
+
+i) The rectangular area gives a perception of 2d view, So it is very easy for visulization purpose.    
+ii) The scaling of each country is correct in conical area.  
+
+Disadvantages:  
+i) In equirectangular area, the scales will be changed according to the map. So, the projection will change our analyze.       
+ii) The orientation angle of each country on the map makes it harder to analyze.    
+
+*4) In order to resolve problems detected in step 1, use data from 2013 only for Brazil and*      
+*a) Create variable X1 by cutting X into 100 piecies (use cut_interval())*  
+```{r,echo=FALSE}
+year_2013_brazil <- year_2013[which(year_2013$COUNTRY=="Brazil"),]
+year_2013_brazil$X1 <- cut_interval(year_2013_brazil$X,100)
+```
+  
+*b) Create variable Y1 by cutting Y into 100 piecies (use cut_interval())*  
+
+```{r,echo = FALSE}
+year_2013_brazil$Y1 <- cut_interval(year_2013_brazil$Y,100)
+```
+  
+*c) Compute mean values of X and Y per group (X1,Y1) and the amount of observations N per group (X1,Y1)*  
+```{r,echo=FALSE}
+new_df <- year_2013_brazil %>% group_by(X1,Y1)
+new_df1 <- new_df %>% summarise(new_mean_X = mean(X),new_mean_Y = mean(Y),n=n(),.groups='drop')
+```
+  
+*d) Visualize mean X,Y and N by using MapBox*  
+```{r,echo=FALSE}
+plot_brazil <- new_df1 %>% plot_mapbox(lon=~new_mean_X,lat=~new_mean_Y,split=~n,mode = 'scattermapbox')
+plot_brazil
+```
+  
+
+  
+```{r,echo=FALSE}
+plot_brazil <- year_2013_brazil %>% plot_mapbox(lon=~X,lat=~Y,split=~n,mode = 'scattermapbox')
+plot_brazil
+```
+  
+The graph with discretized value is similar as the undiscretized value but when the value are discretized value, we can know about the total number of mosquitoes rather than knowing just the presence.  
+
+# Assignment 2  
+*a) Download a relevant map of Swedish counties from http://gadm.org/country and load it into R. Read your data into R and process it in such a way that different age groups are shown in different columns. Let’s call these groups Young, Adult and Senior*  
+```{r,echo=FALSE}
+county_data <- read.csv("MeanData.csv")
+new_county_data <- county_data %>% group_by(region) %>% summarise(Young = X2016[1], Adult = X2016[2], Senior = X2016[3])
+```
+  
+*b) Create a plot containing three violin plots showing mean income distributions per age group. Analyze this plot and interpret your analysis in terms of income*  
+```{r,echo=FALSE}
+p <- ggplot(county_data, aes(age,X2016))
+p <- p + geom_violin() 
+p <- p + stat_summary(fun.y = mean,geom="point")
+p <- p + ylab("Mean Salary")
+ggplotly(p)
+```
+  
+Most salary for young people is around the mean value. In Adult and Senior people, even though many points revolve around mean point, considerable portion are away from the mean point.  
+
+*c) Create a surface plot showing dependence of Senior incomes on Adult and Young incomes in various counties. What kind of trend can you see and how can this be interpreted? Do you think that linear regression would be suitable to model this dependence?*  
+```{r,echo=FALSE}
+s=interp(new_county_data$Young,new_county_data$Adult,new_county_data$Senior, duplicate = "mean")
+title = list(x="Young",y="Adult",z="Senior")
+p <- plot_ly(x=~s$x, y=~s$y, z=~s$z, type="surface") %>% layout(title = "Surface Dependance graph of Senior on Adulta and Young")
+p
+```
+
+  
+The dependence of salary for Senior on Adult and Youth is linear. Since the graph appears to be linear, Linear Regression could be implemented.   
+  
+*4) Use Plotly and add_sf() function to visualize incomes of Young and Adults in two choropleth maps. Analyze these maps and make conclusions. Is there any new information that you could not discover in previous statistical plots?*  
+
+i) for young  
+
+```{r,echo=FALSE,warning=FALSE,error=FALSE}
+rds <- readRDS("gadm36_SWE_1_sf.rds") 
+rds$Young<-new_county_data[rds$NAME_1, "Young"]
+rds$Adult<-new_county_data[rds$NAME_1, "Adult"]
+plot_ly() %>%
+  plotly::add_sf(data = rds, split = ~NAME_1, color = ~Young, showlegend = F, alpha = 1) %>% 
+  layout(title = "Mean income for Young")
+```
+  
+ii) Adults  
+```{r,echo=FALSE,warning=FALSE,error=FALSE}
+plot_ly() %>% add_sf(data = rds, split = ~NAME_1, color = ~Adult, showlegend = T, alpha = 1) %>% 
+    layout(title = "Mean income for Adult")
+```
+
+*5) Use GPVisualizer http://www.gpsvisualizer.com/geocoder/ and extract the coordinates of Linköping. Add a red dot to the choropleth map for Young from step 4 in order to show where we are located :)*  
+```{r,echo=FALSE,warning=FALSE,error=FALSE}
+plot_ly() %>% 
+  add_sf(data = rds, split = ~NAME_1, color = ~Young, showlegend = F, alpha = 1) %>% 
+  add_markers(x= 15.624522, y = 58.409814, name = "Linköping :)", 
+              marker = list(color = 'red', size = 5)) %>% 
+  layout(title = "Mean income for Young")
+```
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
+
+
